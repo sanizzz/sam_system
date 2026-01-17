@@ -298,3 +298,322 @@ async def github_get_repo_info(
             "status": "error",
             "message": f"Unexpected error: {str(e)}",
         }
+
+
+async def github_get_file_tree(
+    repo: str,
+    path: str = "",
+    branch: Optional[str] = None,
+    recursive: bool = True,
+    tool_context: Optional[Any] = None,
+    tool_config: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Get the file tree structure of a GitHub repository.
+
+    Args:
+        repo: GitHub repository in "owner/repo" format.
+        path: Path within the repository to list (default: root).
+        branch: Branch to get tree from (default: repository's default branch).
+        recursive: Whether to fetch the full tree recursively (default: True).
+
+    Returns:
+        A dictionary with the file tree structure.
+    """
+    log_id = f"[GitTools:get_file_tree:{repo}]"
+    log.debug(f"{log_id} Fetching file tree (path={path}, branch={branch}, recursive={recursive})")
+
+    token = None
+    if tool_config:
+        token = tool_config.get("github_token")
+
+    try:
+        g = Github(token) if token else Github()
+        repository = g.get_repo(repo)
+        branch = branch or repository.default_branch
+
+        if recursive:
+            # Get full tree recursively
+            tree = repository.get_git_tree(branch, recursive=True)
+            files: List[Dict[str, Any]] = []
+            dirs: set = set()
+            
+            for item in tree.tree:
+                item_path = item.path
+                if path and not item_path.startswith(path):
+                    continue
+                    
+                if item.type == "blob":
+                    files.append({
+                        "path": item_path,
+                        "type": "file",
+                        "size": item.size,
+                    })
+                elif item.type == "tree":
+                    dirs.add(item_path)
+            
+            log.info(f"{log_id} Retrieved {len(files)} files and {len(dirs)} directories")
+            return {
+                "status": "success",
+                "repository": repo,
+                "branch": branch,
+                "path": path or "/",
+                "file_count": len(files),
+                "directory_count": len(dirs),
+                "files": files[:200],  # Limit to 200 files
+                "directories": sorted(list(dirs))[:100],  # Limit to 100 dirs
+            }
+        else:
+            # Get contents at specific path
+            contents = repository.get_contents(path or "", ref=branch)
+            items: List[Dict[str, Any]] = []
+            
+            if isinstance(contents, list):
+                for item in contents:
+                    items.append({
+                        "name": item.name,
+                        "path": item.path,
+                        "type": "file" if item.type == "file" else "directory",
+                        "size": item.size if item.type == "file" else None,
+                    })
+            else:
+                items.append({
+                    "name": contents.name,
+                    "path": contents.path,
+                    "type": "file" if contents.type == "file" else "directory",
+                    "size": contents.size if contents.type == "file" else None,
+                })
+            
+            log.info(f"{log_id} Retrieved {len(items)} items at path '{path}'")
+            return {
+                "status": "success",
+                "repository": repo,
+                "branch": branch,
+                "path": path or "/",
+                "items": items,
+            }
+
+    except GithubException as e:
+        log.error(f"{log_id} GitHub API error: {e.data.get('message', str(e))}", exc_info=True)
+        return {
+            "status": "error",
+            "message": f"GitHub API error: {e.data.get('message', str(e))}",
+        }
+    except Exception as e:
+        log.error(f"{log_id} Unexpected error: {e}", exc_info=True)
+        return {
+            "status": "error",
+            "message": f"Unexpected error: {str(e)}",
+        }
+
+
+async def github_get_file_contents(
+    repo: str,
+    path: str,
+    branch: Optional[str] = None,
+    tool_context: Optional[Any] = None,
+    tool_config: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Get the contents of a file from a GitHub repository.
+
+    Args:
+        repo: GitHub repository in "owner/repo" format.
+        path: Path to the file within the repository.
+        branch: Branch to get file from (default: repository's default branch).
+
+    Returns:
+        A dictionary with the file contents and metadata.
+    """
+    log_id = f"[GitTools:get_file_contents:{repo}]"
+    log.debug(f"{log_id} Fetching file contents (path={path}, branch={branch})")
+
+    token = None
+    if tool_config:
+        token = tool_config.get("github_token")
+
+    try:
+        g = Github(token) if token else Github()
+        repository = g.get_repo(repo)
+        branch = branch or repository.default_branch
+
+        contents = repository.get_contents(path, ref=branch)
+        
+        if isinstance(contents, list):
+            return {
+                "status": "error",
+                "message": f"Path '{path}' is a directory, not a file. Use github_get_file_tree instead.",
+            }
+        
+        # Check file size - limit to 500KB to avoid context overflow
+        if contents.size > 500000:
+            return {
+                "status": "error",
+                "message": f"File is too large ({contents.size} bytes). Maximum supported size is 500KB.",
+            }
+        
+        # Decode content
+        try:
+            decoded_content = contents.decoded_content.decode("utf-8")
+        except UnicodeDecodeError:
+            return {
+                "status": "error",
+                "message": "File appears to be binary and cannot be decoded as text.",
+            }
+        
+        # Truncate if still too long
+        max_chars = 50000
+        truncated = len(decoded_content) > max_chars
+        if truncated:
+            decoded_content = decoded_content[:max_chars] + "\n\n... [TRUNCATED - File too long]"
+
+        log.info(f"{log_id} Retrieved file '{path}' ({contents.size} bytes)")
+        return {
+            "status": "success",
+            "repository": repo,
+            "branch": branch,
+            "path": path,
+            "name": contents.name,
+            "size": contents.size,
+            "encoding": contents.encoding,
+            "truncated": truncated,
+            "content": decoded_content,
+            "url": contents.html_url,
+        }
+
+    except GithubException as e:
+        log.error(f"{log_id} GitHub API error: {e.data.get('message', str(e))}", exc_info=True)
+        return {
+            "status": "error",
+            "message": f"GitHub API error: {e.data.get('message', str(e))}",
+        }
+    except Exception as e:
+        log.error(f"{log_id} Unexpected error: {e}", exc_info=True)
+        return {
+            "status": "error",
+            "message": f"Unexpected error: {str(e)}",
+        }
+
+
+async def github_get_readme(
+    repo: str,
+    branch: Optional[str] = None,
+    tool_context: Optional[Any] = None,
+    tool_config: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Get the README file from a GitHub repository.
+
+    Args:
+        repo: GitHub repository in "owner/repo" format.
+        branch: Branch to get README from (default: repository's default branch).
+
+    Returns:
+        A dictionary with the README contents.
+    """
+    log_id = f"[GitTools:get_readme:{repo}]"
+    log.debug(f"{log_id} Fetching README (branch={branch})")
+
+    token = None
+    if tool_config:
+        token = tool_config.get("github_token")
+
+    try:
+        g = Github(token) if token else Github()
+        repository = g.get_repo(repo)
+        
+        readme = repository.get_readme(ref=branch)
+        
+        try:
+            decoded_content = readme.decoded_content.decode("utf-8")
+        except UnicodeDecodeError:
+            return {
+                "status": "error",
+                "message": "README cannot be decoded as text.",
+            }
+        
+        log.info(f"{log_id} Retrieved README ({readme.size} bytes)")
+        return {
+            "status": "success",
+            "repository": repo,
+            "branch": branch or repository.default_branch,
+            "name": readme.name,
+            "path": readme.path,
+            "size": readme.size,
+            "content": decoded_content,
+            "url": readme.html_url,
+        }
+
+    except GithubException as e:
+        log.error(f"{log_id} GitHub API error: {e.data.get('message', str(e))}", exc_info=True)
+        return {
+            "status": "error",
+            "message": f"GitHub API error: {e.data.get('message', str(e))}",
+        }
+    except Exception as e:
+        log.error(f"{log_id} Unexpected error: {e}", exc_info=True)
+        return {
+            "status": "error",
+            "message": f"Unexpected error: {str(e)}",
+        }
+
+
+async def github_analyze_languages(
+    repo: str,
+    tool_context: Optional[Any] = None,
+    tool_config: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Analyze the programming languages used in a GitHub repository.
+
+    Args:
+        repo: GitHub repository in "owner/repo" format.
+
+    Returns:
+        A dictionary with language statistics.
+    """
+    log_id = f"[GitTools:analyze_languages:{repo}]"
+    log.debug(f"{log_id} Analyzing languages")
+
+    token = None
+    if tool_config:
+        token = tool_config.get("github_token")
+
+    try:
+        g = Github(token) if token else Github()
+        repository = g.get_repo(repo)
+        
+        languages = repository.get_languages()
+        total_bytes = sum(languages.values())
+        
+        language_stats = []
+        for lang, bytes_count in sorted(languages.items(), key=lambda x: x[1], reverse=True):
+            percentage = (bytes_count / total_bytes * 100) if total_bytes > 0 else 0
+            language_stats.append({
+                "language": lang,
+                "bytes": bytes_count,
+                "percentage": round(percentage, 2),
+            })
+
+        log.info(f"{log_id} Found {len(languages)} languages")
+        return {
+            "status": "success",
+            "repository": repo,
+            "primary_language": repository.language,
+            "total_bytes": total_bytes,
+            "language_count": len(languages),
+            "languages": language_stats,
+        }
+
+    except GithubException as e:
+        log.error(f"{log_id} GitHub API error: {e.data.get('message', str(e))}", exc_info=True)
+        return {
+            "status": "error",
+            "message": f"GitHub API error: {e.data.get('message', str(e))}",
+        }
+    except Exception as e:
+        log.error(f"{log_id} Unexpected error: {e}", exc_info=True)
+        return {
+            "status": "error",
+            "message": f"Unexpected error: {str(e)}",
+        }

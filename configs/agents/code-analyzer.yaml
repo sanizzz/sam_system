@@ -1,0 +1,180 @@
+log:
+  stdout_log_level: INFO
+
+!include ../shared_config.yaml
+
+# =============================================================================
+# CODE ANALYZER AGENT: GitHub Repository Analysis
+# =============================================================================
+# This agent analyzes any public GitHub repository and provides a comprehensive
+# summary of the codebase structure, technologies, and architecture.
+#
+# Example usage:
+#   "Analyze the codebase of facebook/react"
+#   "Give me a summary of microsoft/vscode"
+#   "What tech stack does vercel/next.js use?"
+#   "Explain the architecture of SolaceLabs/solace-agent-mesh"
+# =============================================================================
+
+apps:
+  - name: code-analyzer_app
+    app_base_path: .
+    app_module: solace_agent_mesh.agent.sac.app
+
+    broker:
+      <<: *broker_connection
+
+    app_config:
+      namespace: ${NAMESPACE, sam/}
+      supports_streaming: true
+      agent_name: "CodeAnalyzer"
+      display_name: "Code Analyzer (GitHub)"
+      model: *general_model
+
+      instruction: |
+        You are a code analysis expert that can analyze ANY public GitHub repository.
+        You don't need local files - you use the GitHub API directly to understand codebases.
+
+        CAPABILITIES:
+        - Get repository info and metadata (github_get_repo_info)
+        - Get the complete file tree structure (github_get_file_tree)
+        - Read specific file contents (github_get_file_contents)
+        - Get README documentation (github_get_readme)
+        - Analyze language composition (github_analyze_languages)
+        - Save analysis reports as files (artifact tools)
+
+        IMPORTANT - REPOSITORY FORMAT:
+        Always specify repos as "owner/repo-name", for example:
+        - "facebook/react"
+        - "microsoft/vscode"
+        - "vercel/next.js"
+        - "SolaceLabs/solace-agent-mesh"
+
+        ANALYSIS WORKFLOW:
+        1. Use github_get_repo_info to understand the repository basics
+        2. Use github_get_readme to read the project documentation
+        3. Use github_analyze_languages to understand the tech stack
+        4. Use github_get_file_tree to map out the codebase structure
+        5. Read key files to understand architecture:
+           - Configuration files (package.json, pyproject.toml, Cargo.toml, etc.)
+           - Entry points (main.py, index.ts, App.tsx, etc.)
+           - Core modules and important source files
+        6. Synthesize findings into a comprehensive summary
+
+        SUMMARY FORMAT - Include these sections:
+        
+        ## 📋 Overview
+        Brief description of what the project does.
+        
+        ## 🛠️ Tech Stack
+        - **Primary Language**: [language] ([percentage]%)
+        - **Framework/Runtime**: [frameworks used]
+        - **Key Dependencies**: [major dependencies]
+        
+        ## 📁 Project Structure
+        Overview of the directory layout and organization.
+        
+        ## 🏗️ Architecture
+        How the codebase is organized, key patterns, and design decisions.
+        
+        ## 📄 Key Files
+        Important files and their purposes.
+        
+        ## 🚀 Getting Started
+        How to set up and run the project (from README).
+        
+        ## 💡 Notable Features
+        Interesting aspects of the codebase worth mentioning.
+
+        TIPS:
+        - Start with README and repo info for context
+        - Look at package.json/pyproject.toml/Cargo.toml for dependencies
+        - Check src/ or lib/ directories for core code
+        - Look for config files to understand project setup
+        - Identify patterns (MVC, microservices, monorepo, etc.)
+
+        RATE LIMITS:
+        Without a GitHub token, you're limited to 60 requests/hour.
+        For heavy analysis, ask the user to configure GITHUB_TOKEN.
+
+      tools:
+        # GitHub code analysis tools
+        - tool_type: python
+          component_module: "src.git_tools"
+          component_base_path: .
+          function_name: "github_get_repo_info"
+          tool_config:
+            github_token: ${GITHUB_TOKEN,}
+
+        - tool_type: python
+          component_module: "src.git_tools"
+          component_base_path: .
+          function_name: "github_get_file_tree"
+          tool_config:
+            github_token: ${GITHUB_TOKEN,}
+
+        - tool_type: python
+          component_module: "src.git_tools"
+          component_base_path: .
+          function_name: "github_get_file_contents"
+          tool_config:
+            github_token: ${GITHUB_TOKEN,}
+
+        - tool_type: python
+          component_module: "src.git_tools"
+          component_base_path: .
+          function_name: "github_get_readme"
+          tool_config:
+            github_token: ${GITHUB_TOKEN,}
+
+        - tool_type: python
+          component_module: "src.git_tools"
+          component_base_path: .
+          function_name: "github_analyze_languages"
+          tool_config:
+            github_token: ${GITHUB_TOKEN,}
+
+        # Built-in artifact tools for saving reports
+        - tool_type: builtin-group
+          group_name: artifact_management
+
+      session_service:
+        type: ${PERSISTENCE_TYPE, memory}
+        database_url: ${CUSTOM_AGENT_DATABASE_URL,}
+
+      artifact_service: *default_artifact_service
+
+      agent_card:
+        description: >
+          Code Analyzer (GitHub) - Analyzes any public GitHub repository and provides
+          a comprehensive summary of the codebase. Use this agent when the user asks
+          "analyze [repo]", "summarize the codebase of [repo]", "what tech stack does
+          [repo] use?", "explain the architecture of [repo]", "give me an overview of
+          [repo]", or wants to understand any GitHub project's structure, technologies,
+          and design. Examples: "Analyze facebook/react", "Give me a summary of
+          microsoft/vscode", "What tech stack does vercel/next.js use?".
+        defaultInputModes: ["text"]
+        defaultOutputModes: ["text", "file"]
+        skills:
+          - id: "analyze_repo"
+            name: "Analyze Repository"
+            description: "Comprehensive analysis of a GitHub repository"
+          - id: "tech_stack"
+            name: "Tech Stack Analysis"
+            description: "Identify technologies and frameworks used"
+          - id: "architecture_overview"
+            name: "Architecture Overview"
+            description: "Understand codebase structure and design patterns"
+          - id: "code_exploration"
+            name: "Code Exploration"
+            description: "Read and explain specific files in a repository"
+
+      agent_card_publishing:
+        interval_seconds: 10
+
+      agent_discovery:
+        enabled: true
+
+      inter_agent_communication:
+        allow_list: ["OrchestratorAgent"]
+        request_timeout_seconds: 120
