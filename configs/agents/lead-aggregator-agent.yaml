@@ -1,0 +1,54 @@
+# Lead Aggregator Agent - Combines all data into final lead list
+
+log:
+  stdout_log_level: INFO
+
+!include ../shared_config.yaml
+
+apps:
+  - name: lead-aggregator-agent_app
+    app_module: solace_agent_mesh.agent.sac.app
+    broker:
+      <<: *broker_connection
+    app_config:
+      namespace: ${NAMESPACE, sam/}
+      agent_name: "LeadAggregatorAgent"
+      model: *general_model
+      
+      tools:
+        - tool_type: builtin-group
+          group_name: artifact_management
+      
+      instruction: |
+        You are a Lead Aggregator Agent that compiles final lead lists for freelancers.
+        
+        Your role is to combine data from other agents:
+        - Business leads (from LeadDiscoveryAgent)
+        - Website audits (from WebsiteAuditAgent)
+        - Drafted pitches (from PitchDraftingAgent)
+        
+        Into a structured final output with each lead containing:
+        - id: unique identifier
+        - name: business name
+        - category: business category
+        - location: full address
+        - phone: formatted phone number
+        - website: website URL
+        - detected_issues: list of problems found
+        - opportunities: list of improvement suggestions
+        - draft_pitch_markdown: complete pitch in Markdown format
+        
+        Save the final lead list as a JSON artifact using save_artifact tool.
+        
+        Ensure all data is well-structured and ready for the frontend to display.
+        
+        IMPORTANT: Provide status updates as you aggregate the data and save artifacts.
+
+      agent_card:
+        title: "Lead Aggregator Agent"
+        description: >
+          Lead Aggregator Agent - Combines all agent outputs into a final structured lead list.
+          Use this agent to compile and format the complete lead dataset for delivery.
+
+      agent_card_publishing:
+        interval_seconds: 10

@@ -1,0 +1,49 @@
+# Lead Discovery Agent - Generates local business leads
+
+log:
+  stdout_log_level: INFO
+
+!include ../shared_config.yaml
+
+apps:
+  - name: lead-discovery-agent_app
+    app_module: solace_agent_mesh.agent.sac.app
+    broker:
+      <<: *broker_connection
+    app_config:
+      namespace: ${NAMESPACE, sam/}
+      agent_name: "LeadDiscoveryAgent"
+      model: *general_model
+      
+      instruction: |
+        You are a Lead Discovery Agent specializing in finding local business leads for freelancers.
+        
+        Your role is to generate realistic, plausible local business leads based on:
+        - Freelancer type (e.g., web developer, graphic designer)
+        - Location (city, state/province)
+        - Target industries (optional filters)
+        - Number of leads requested
+        
+        For DEMO purposes, you generate SYNTHETIC data - you DO NOT call external APIs.
+        
+        Generate leads with these fields:
+        - Business name (realistic for the location/industry)
+        - Category (restaurant, retail, dental, etc.)
+        - Location (full address in the specified area)
+        - Phone number (formatted correctly for the location)
+        - Website URL (realistic domain)
+        
+        Make the businesses diverse across different industries and neighborhoods within the specified location.
+        Return results as a structured list in JSON format.
+        
+        IMPORTANT: Provide status updates before generating leads to show progress.
+
+      agent_card:
+        title: "Lead Discovery Agent"
+        description: >
+          Lead Discovery Agent - Generates local business leads for cold calling.
+          Use this agent when you need to discover potential business leads for a freelancer
+          based on location, industry, and services offered.
+
+      agent_card_publishing:
+        interval_seconds: 10
