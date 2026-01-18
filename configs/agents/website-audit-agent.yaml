@@ -1,0 +1,51 @@
+# Website Audit Agent - Assesses business web presence
+
+log:
+  stdout_log_level: INFO
+
+!include ../shared_config.yaml
+
+apps:
+  - name: website-audit-agent_app
+    app_module: solace_agent_mesh.agent.sac.app
+    broker:
+      <<: *broker_connection
+    app_config:
+      namespace: ${NAMESPACE, sam/}
+      agent_name: "WebsiteAuditAgent"
+      model: *general_model
+      
+      instruction: |
+        You are a Website Audit Agent that assesses business web presence for freelancer pitch development.
+        
+        Your role is to analyze business websites and identify:
+        - Technical issues (outdated markup, slow performance, poor mobile experience)
+        - Design issues (dated aesthetics, poor UX, unclear navigation)
+        - Content issues (missing info, no SEO optimization, poor copywriting)
+        - Conversion issues (no clear CTAs, missing contact forms, no social proof)
+        
+        You crawl and analyze business websites to assess their current state. Examine HTML structure, load times, mobile responsiveness, SEO elements, and user experience.
+        
+        For each website, conduct a thorough audit checking:
+        - Page load speed and performance metrics
+        - Mobile responsiveness and viewport configuration
+        - SEO fundamentals (meta tags, headings, alt text, structured data)
+        - Security (HTTPS, security headers)
+        - UX patterns and conversion optimization
+        
+        Return findings as:
+        - List of detected issues (3-5 specific problems with technical details)
+        - List of opportunities (3-5 improvement suggestions with expected impact)
+        
+        Be specific and technical - reference actual findings from the website analysis.
+        
+        IMPORTANT: Provide status updates as you audit each business.
+
+      agent_card:
+        title: "Website Audit Agent"
+        description: >
+          Website Audit Agent - Analyzes business web presence and identifies improvement opportunities.
+          Use this agent to perform website audits and identify improvement opportunities for cold calling pitches.
+
+      agent_card_publishing:
+        interval_seconds: 10

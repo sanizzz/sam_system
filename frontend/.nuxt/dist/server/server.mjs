@@ -1,0 +1,1 @@
+export { default } from "file:///C:/Users/sanid/OneDrive/Desktop/sam/solace-agent-mesh-hackathon-quickstart/frontend/node_modules/@nuxt/vite-builder/dist/runtime/vite-node.mjs"
