@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -22,7 +23,21 @@ export default function LeadsPage() {
     const [error, setError] = useState<string | null>(null);
     const eventSourceRef = useRef<EventSource | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const extractTextContent = (data: any): string | null => {
+        try {
+            const content = data.result?.status?.message?.content;
+            if (!content || !Array.isArray(content)) return null;
 
+            const textParts = content
+                .filter((part: any) => part.text)
+                .map((part: any) => part.text);
+
+            return textParts.join('\n\n');
+        } catch (err) {
+            console.error('Error extracting text content:', err);
+            return null;
+        }
+    };
     useEffect(() => {
         if (!taskId) return;
 
@@ -105,6 +120,7 @@ export default function LeadsPage() {
 
         eventSource.addEventListener('error', (event: MessageEvent) => {
             try {
+                if (!event?.data) return;
                 const data = JSON.parse(event.data);
                 const errorMsg = data.error || 'An error occurred';
                 setError(errorMsg);
@@ -140,21 +156,7 @@ export default function LeadsPage() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const extractTextContent = (data: any): string | null => {
-        try {
-            const content = data.result?.status?.message?.content;
-            if (!content || !Array.isArray(content)) return null;
 
-            const textParts = content
-                .filter((part: any) => part.text)
-                .map((part: any) => part.text);
-
-            return textParts.join('\n\n');
-        } catch (err) {
-            console.error('Error extracting text content:', err);
-            return null;
-        }
-    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
@@ -221,10 +223,10 @@ export default function LeadsPage() {
                             <div
                                 key={message.id}
                                 className={`p-4 rounded-lg ${message.type === 'error'
-                                        ? 'bg-red-50 border-l-4 border-red-400'
-                                        : message.type === 'final'
-                                            ? 'bg-green-50 border-l-4 border-green-400'
-                                            : 'bg-blue-50 border-l-4 border-blue-400'
+                                    ? 'bg-red-50 border-l-4 border-red-400'
+                                    : message.type === 'final'
+                                        ? 'bg-green-50 border-l-4 border-green-400'
+                                        : 'bg-blue-50 border-l-4 border-blue-400'
                                     }`}
                             >
                                 <div className="flex items-start">
