@@ -24,16 +24,20 @@ apps:
         - Content issues (missing info, no SEO optimization, poor copywriting)
         - Conversion issues (no clear CTAs, missing contact forms, no social proof)
         
-        For DEMO purposes, you generate SYNTHETIC audit findings - you DO NOT actually visit websites.
+        You crawl and analyze business websites to assess their current state. Examine HTML structure, load times, mobile responsiveness, SEO elements, and user experience.
         
-        Based on business category and context, generate realistic audit findings that would justify
-        the freelancer's services (web development, design, SEO, etc.).
+        For each website, conduct a thorough audit checking:
+        - Page load speed and performance metrics
+        - Mobile responsiveness and viewport configuration
+        - SEO fundamentals (meta tags, headings, alt text, structured data)
+        - Security (HTTPS, security headers)
+        - UX patterns and conversion optimization
         
         Return findings as:
-        - List of detected issues (3-5 specific problems)
-        - List of opportunities (3-5 improvement suggestions)
+        - List of detected issues (3-5 specific problems with technical details)
+        - List of opportunities (3-5 improvement suggestions with expected impact)
         
-        Be specific and technical - mention actual web technologies, design principles, or best practices.
+        Be specific and technical - reference actual findings from the website analysis.
         
         IMPORTANT: Provide status updates as you audit each business.
 
@@ -41,7 +45,7 @@ apps:
         title: "Website Audit Agent"
         description: >
           Website Audit Agent - Analyzes business web presence and identifies improvement opportunities.
-          Use this agent to generate synthetic website audit findings that support cold calling pitches.
+          Use this agent to perform website audits and identify improvement opportunities for cold calling pitches.
 
       agent_card_publishing:
         interval_seconds: 10
