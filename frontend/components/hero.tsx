@@ -3,28 +3,21 @@ import Link from "next/link";
 
 export function Hero() {
   return (
-    <section className="relative h-screen flex items-center justify-center overflow-hidden">
-      {/* Background Image */}
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: "url('https://media.discordapp.net/attachments/1462227805197697094/1462477174660661381/image.png?ex=696e5581&is=696d0401&hm=765a934029e762c5736ac68ee7780e2423d932a1b4de75b58f496d5b0fb457cc&=&format=webp&quality=lossless&width=960&height=960')",
-        }}
-      />
-
-      {/* Dark Overlay */}
-      <div className="absolute inset-0 bg-black/30" />
-
+    <section className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#60a5fa] via-[#3b82f6] to-[#1e40af]">
       {/* Content */}
       <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
-        <h1 className="font-serif text-white text-5xl md:text-7xl lg:text-8xl leading-tight tracking-tight text-balance">
-          Introducing
-          <br />
-          Skillify.
+        <h1 className="font-serif text-white text-6xl md:text-7xl lg:text-8xl tracking-tight italic mb-8">
+          Skillify
         </h1>
 
-        <p className="mt-6 text-white/90 text-lg md:text-xl max-w-xl mx-auto">
-          Revolutionizing lead generation for freelancers powered by AI
+        <p className="text-white text-2xl md:text-3xl lg:text-4xl leading-tight tracking-tight text-balance">
+          One platform to <em className="font-serif">seamlessly</em> manage
+          <br />
+          and scale creative operations
+        </p>
+
+        <p className="mt-6 text-white/90 text-lg md:text-xl max-w-2xl mx-auto">
+          <em className="font-serif">Revolutionizing</em> lead generation for freelancers powered by <em className="font-serif">AI</em>
         </p>
 
         <div className="mt-8 flex justify-center">
